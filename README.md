@@ -4,7 +4,7 @@ A simple S44/WAV/ADPCM player for ras68k-ext on Human68k/X680x0
 
 ---
 
-### About This
+## About This
 
 X680x0 のパラレルインターフェイスと Raspberry Pi + Pico を活用したレトロ音源システムである ras68k-ext 専用の S44/WAV/ADPCM プレーヤーです。以下のような特長があります。
 
@@ -25,13 +25,13 @@ BOOTH
 
 ---
 
-### Install
+## Install
 
 S44PRxxx.ZIP をダウンロードして、S44P_RAS.X をパスの通ったディレクトリにコピーします。
 
 ---
 
-### Usage
+## Usage
 
 注意：本プログラムの動作には ras68k-ext サポートライブラリ兼ドライバである PIlib.X の導入と常駐が必要になります。PIlib.X が常駐していない場合はエラーとなり起動できません。
 
@@ -71,7 +71,7 @@ S44PRxxx.ZIP をダウンロードして、S44P_RAS.X をパスの通ったデ�
 
 ---
 
-### History
+## History
 
 * 0.1.0 (2023/05/19) ... 初版
 

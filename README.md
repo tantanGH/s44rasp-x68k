@@ -71,6 +71,16 @@ S44PRxxx.ZIP をダウンロードして、S44P_RAS.X をパスの通ったデ�
 
 ---
 
+## 動作確認環境
+
+以下の環境でのみ動作確認しています。
+
+* X68000XVI (16.7MHz) + ArdSCSino-stm32
+* Raspberry Pi 4B + ras68k-ext (新バージョン)
+* PIlib.X (2022/11/30版)
+
+---
+
 ## Special Thanks
 
 * ras68k-ext ハードウェア, PIlib.X および技術資料 / opmregistersさん

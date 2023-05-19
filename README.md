@@ -6,7 +6,7 @@ A simple S44/WAV/ADPCM player for ras68k-ext on Human68k/X680x0
 
 ## About This
 
-X680x0 のパラレルインターフェイスと Raspberry Pi + Pico を活用したレトロ音源システムである ras68k-ext 用の S44/WAV/ADPCM プレーヤーです。ディスクからの逐次読み込みにより長い曲を演奏することを想定しています。Human68k上のコマンドラインツールです。
+X680x0 のパラレルインターフェイスと Raspberry Pi + Pico を活用したレトロ音源システムである ras68k-ext 用の S44/WAV/ADPCM プレーヤーです。まーきゅりーゆにっとが無くても高品質のステレオPCM再生が可能です。また、ディスクからの逐次読み込みにより長い曲が演奏できます。Human68k上のコマンドラインツールです。
 
 ras68k-ext については、開発者である opmregister氏のサイトを参照してください。
 

@@ -46,7 +46,7 @@ S44PRxxx.ZIP をダウンロードして、S44P_RAS.X をパスの通ったデ�
          -b[n] ... buffer size (1-32, default:4)
          -h    ... show help message
 
-サポートしているのは以下の形式のみで、拡張子により判断します。
+サポートしているファイル形式は以下で、拡張子により判断します。
 
 - PCM ... X68k ADPCM 15.6kHz mono
 - S16/S22/S24/S32/S44/S48 ... 16bit signed raw PCM stereo (big endian)
@@ -55,19 +55,19 @@ S44PRxxx.ZIP をダウンロードして、S44P_RAS.X をパスの通ったデ�
 
 リバーブタイプ(`-r`)は以下の8種類から選択できます。デフォルトは1のroomです。
 
-0. no reverb
-1. room
-2. studio small
-3. studio medium
-4. studio large
-5. hall
-6. space echo
-7. half echo
+* -r0 ... no reverb
+* -r1 ... room (default)
+* -r2 ... studio small
+* -r3 ... studio medium
+* -r4 ... studio large
+* -r5 ... hall
+* -r6 ... space echo
+* -r7 ... half echo
 
 再生品質(`-q`)は以下の2通りです。デフォルトは1です。
 
-0. オリジナルの周波数、ビット数のまま再生を試みます。転送が間に合わない場合は音が途切れます。
-1. ハーフレート、ハーフビットでの再生になります。ADPCMについてはオリジナルのままです。
+* -q0 ... オリジナルの周波数、ビット数のまま再生を試みます。転送が間に合わない場合は音が途切れます。
+* -q1 ... ハーフレート、ハーフビットでの再生になります。ADPCMについてはオリジナルのままです。
 
 ---
 

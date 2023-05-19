@@ -73,10 +73,10 @@ int32_t ras68k_pilib_init_midi() {
 //
 //  set ADPCM/PCM filter ($0002)
 //
-int32_t ras68k_pilib_set_pcm_filter(int16_t mode) {
+int32_t ras68k_pilib_set_pcm_filter(int16_t filter_enabled) {
 
 	register uint32_t reg_d0 asm ("d0") = 0x0002;
-	register uint32_t reg_d1 asm ("d1") = mode;     // 0:off 1:on
+	register uint32_t reg_d1 asm ("d1") = filter_enabled;     // 0:off 1:on
 
   asm volatile (
     "trap #5\n"         // trap #5
@@ -109,7 +109,7 @@ int32_t ras68k_pilib_set_reverb_type(int16_t reverb_type) {
 //
 //  upload pcm data ($0004)
 //
-int32_t ras68k_pilib_upload_pcm_data(uint8_t* buf, size_t buf_len) {
+int32_t ras68k_pilib_upload_pcm_data(void* buf, size_t buf_len) {
 
 	register uint32_t reg_d0 asm ("d0") = 0x0004;
 	register uint32_t reg_d1 asm ("d1") = buf_len;
@@ -201,7 +201,7 @@ int32_t ras68k_pilib_stop_pcm() {
 //
 //   play ADPCM ($0009)
 //
-int32_t ras68k_pilib_play_adpcm(uint32_t mode, uint8_t* buf, size_t buf_len) {
+int32_t ras68k_pilib_play_adpcm(uint32_t mode, void* buf, size_t buf_len) {
 
 	register uint32_t reg_d0 asm ("d0") = 0x0009;
 	register uint32_t reg_d1 asm ("d1") = mode;
@@ -223,7 +223,7 @@ int32_t ras68k_pilib_play_adpcm(uint32_t mode, uint8_t* buf, size_t buf_len) {
 //
 //   play PCM ($000a)
 //
-int32_t ras68k_pilib_play_pcm(uint16_t channel, uint32_t mode, uint8_t* buf, size_t buf_len) {
+int32_t ras68k_pilib_play_pcm(uint16_t channel, uint32_t mode, void* buf, size_t buf_len) {
 
 	register uint32_t reg_d0 asm ("d0") = 0x000a + (channel << 16);
 	register uint32_t reg_d1 asm ("d1") = mode;
@@ -245,7 +245,7 @@ int32_t ras68k_pilib_play_pcm(uint16_t channel, uint32_t mode, uint8_t* buf, siz
 //
 //   play PCM at variable frequency ($000e)
 //
-int32_t ras68k_pilib_play_pcm_freq(uint16_t channel, uint32_t mode, uint32_t freq, uint8_t* buf, size_t buf_len) {
+int32_t ras68k_pilib_play_pcm_freq(uint16_t channel, uint32_t mode, uint32_t freq, void* buf, size_t buf_len) {
 
 	register uint32_t reg_d0 asm ("d0") = 0x000e + (channel << 16);
 	register uint32_t reg_d1 asm ("d1") = mode;

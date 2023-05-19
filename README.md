@@ -42,7 +42,12 @@ S44PRxxx.ZIP をダウンロードして、S44P_RAS.X をパスの通ったデ�
     options:
          -v[n] ... volume (1-15, default:7)
          -r[n] ... reverb type (0-7, default:1)
-         -q[n] ... quality (0:high, 1:normal, default:1)
+         -q[n] ... quality (0:full, 1:half-rate, 2:half-rate&bits, default:2)
+
+         -i <indirect-file> ... indirect file
+         -l[n] ... loop count
+         -s    ... shuffle play
+
          -b[n] ... buffer size (1-32, default:4)
          -h    ... show help message
 
@@ -75,8 +80,8 @@ S44PRxxx.ZIP をダウンロードして、S44P_RAS.X をパスの通ったデ�
 
 以下の環境でのみ動作確認しています。
 
-* X68000XVI (16.7MHz) + ArdSCSino-stm32
-* Raspberry Pi 4B + ras68k-ext (新バージョン)
+* X68000XVI (MC68000 16.7MHz, 8MB RAM) + ArdSCSino-stm32
+* Raspberry Pi 4B + ras68k-ext (2023新バージョン)
 * PIlib.X (2022/11/30版)
 
 ---

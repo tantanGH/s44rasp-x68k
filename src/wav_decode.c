@@ -7,7 +7,7 @@
 //
 //  init wav decoder handle
 //
-int32_t wav_decode_init(WAV_DECODE_HANDLE* wav) {
+int32_t wav_decode_init(WAV_DECODE_HANDLE* wav, int16_t half_rate, int16_t half_bits) {
 
   int32_t rc = -1;
 
@@ -18,8 +18,11 @@ int32_t wav_decode_init(WAV_DECODE_HANDLE* wav) {
   wav->bits_per_sample = -1;
   wav->duration = -1;
 
-  wav->resample_counter = 0;
+  wav->half_rate = half_rate;
+  wav->half_bits = half_bits;
  
+  wav->resample_counter = 0;
+
   rc = 0;
 
 exit:
@@ -170,104 +173,164 @@ int32_t wav_decode_parse_header(WAV_DECODE_HANDLE* wav, FILE* fp) {
 
   rc = bytes_read;
 
+  // half rate is applicable for 32000Hz or higher
+  if (wav->sample_rate < 32000 && wav->half_rate) {
+    wav->half_rate = 0;
+  }
+
 exit:
   return rc;
 }
 
 //
-//  resampling with endian conversion
+//  execution with/without rate and bits conversion
 //
-size_t wav_decode_resample(WAV_DECODE_HANDLE* wav, int16_t* resample_buffer, int32_t resample_freq, int16_t* source_buffer, size_t source_buffer_len, int16_t gain) {
+size_t wav_decode_exec(WAV_DECODE_HANDLE* wav, void* output_buffer, int16_t* source_buffer, size_t source_buffer_len) {
 
-  // resampling
   size_t source_buffer_ofs = 0;
-  size_t resample_buffer_ofs = 0;
+  size_t output_buffer_ofs = 0;
   
   if (wav->channels == 2) {
 
-    while (source_buffer_ofs < source_buffer_len) {
-    
-      // down sampling
-      wav->resample_counter += resample_freq;
-      if (wav->resample_counter < wav->sample_rate) {
-        source_buffer_ofs += wav->channels;     // skip
-        continue;
+    // stereo
+
+    if (wav->half_rate == 0) {
+
+      if (wav->half_bits == 0) {
+        // endian conversion only
+        int16_t* output_buffer_int16 = (int16_t*)output_buffer;
+        while (source_buffer_ofs < source_buffer_len) {
+          uint8_t* source_buffer_uint8 = (uint8_t*)(&(source_buffer[ source_buffer_ofs ]));
+          int16_t lch = (int16_t)(source_buffer_uint8[1] * 256 + source_buffer_uint8[0]);
+          int16_t rch = (int16_t)(source_buffer_uint8[3] * 256 + source_buffer_uint8[2]);
+          output_buffer_int16[ output_buffer_ofs++ ] = lch;
+          output_buffer_int16[ output_buffer_ofs++ ] = rch;
+        }
+      } else {
+        // signed 16bit to signed 8bit
+        int8_t* output_buffer_int8 = (int8_t*)output_buffer;
+        while (source_buffer_ofs < source_buffer_len) {
+          uint8_t* source_buffer_uint8 = (uint8_t*)(&(source_buffer[ source_buffer_ofs ]));
+          int8_t lch = (int8_t)source_buffer_uint8[1];
+          int8_t rch = (int8_t)source_buffer_uint8[3];
+          output_buffer_int8[ output_buffer_ofs++ ] = lch;
+          output_buffer_int8[ output_buffer_ofs++ ] = rch;
+        }
       }
 
-      wav->resample_counter -= wav->sample_rate;
-    
-      // little endian
-      uint8_t* source_buffer_uint8 = (uint8_t*)(&(source_buffer[ source_buffer_ofs ]));
-      int16_t lch = (int16_t)(source_buffer_uint8[0] + source_buffer_uint8[1] * 256);
-      int16_t rch = (int16_t)(source_buffer_uint8[2] + source_buffer_uint8[3] * 256);
-      int16_t x = ((int32_t)(lch + rch)) / 2 / gain;
-      resample_buffer[ resample_buffer_ofs++ ] = x;
-      source_buffer_ofs += 2;
+    } else {
+
+      if (wav->half_bits == 0) {
+
+        // endian conversion only
+        int16_t* output_buffer_int16 = (int16_t*)output_buffer;
+        while (source_buffer_ofs < source_buffer_len) {
+
+          // half sampling
+          wav->resample_counter++;
+          if (!(wav->resample_counter & 0x01)) {
+            source_buffer_ofs += wav->channels;
+            continue;
+          }
+
+          uint8_t* source_buffer_uint8 = (uint8_t*)(&(source_buffer[ source_buffer_ofs ]));
+          int16_t lch = (int16_t)(source_buffer_uint8[1] * 256 + source_buffer_uint8[0]);
+          int16_t rch = (int16_t)(source_buffer_uint8[3] * 256 + source_buffer_uint8[2]);
+          output_buffer_int16[ output_buffer_ofs++ ] = lch;
+          output_buffer_int16[ output_buffer_ofs++ ] = rch;
+        }
+
+      } else {
+
+        // signed 16bit to signed 8bit
+        int8_t* output_buffer_int8 = (int8_t*)output_buffer;
+        while (source_buffer_ofs < source_buffer_len) {
+
+          // half sampling
+          wav->resample_counter++;
+          if (!(wav->resample_counter & 0x01)) {
+            source_buffer_ofs += wav->channels;
+            continue;
+          }
+
+          uint8_t* source_buffer_uint8 = (uint8_t*)(&(source_buffer[ source_buffer_ofs ]));
+          int8_t lch = (int8_t)source_buffer_uint8[1];
+          int8_t rch = (int8_t)source_buffer_uint8[3];
+          output_buffer_int8[ output_buffer_ofs++ ] = lch;
+          output_buffer_int8[ output_buffer_ofs++ ] = rch;
+        }
+
+      }
 
     }
 
   } else {
 
-    while (source_buffer_ofs < source_buffer_len) {
-  
-      // down sampling
-      wav->resample_counter += resample_freq;
-      if (wav->resample_counter < wav->sample_rate) {
-        source_buffer_ofs += wav->channels;     // skip
-        continue;
+    // mono
+
+    if (wav->half_rate == 0) {
+
+      if (wav->half_bits == 0) {
+        // endian conversion only
+        int16_t* output_buffer_int16 = (int16_t*)output_buffer;
+        while (source_buffer_ofs < source_buffer_len) {
+          uint8_t* source_buffer_uint8 = (uint8_t*)(&(source_buffer[ source_buffer_ofs ]));
+          int16_t mch = (int16_t)(source_buffer_uint8[1] * 256 + source_buffer_uint8[0]);
+          output_buffer_int16[ output_buffer_ofs++ ] = mch;
+        }
+      } else {
+        // signed 16bit to signed 8bit
+        int8_t* output_buffer_int8 = (int8_t*)output_buffer;
+        while (source_buffer_ofs < source_buffer_len) {
+          uint8_t* source_buffer_uint8 = (uint8_t*)(&(source_buffer[ source_buffer_ofs ]));
+          int8_t mch = (int8_t)source_buffer_uint8[1];
+          output_buffer_int8[ output_buffer_ofs++ ] = mch;
+        }
       }
 
-      wav->resample_counter -= wav->sample_rate;
+    } else {
 
-      // little endian
-      uint8_t* source_buffer_uint8 = (uint8_t*)(&(source_buffer[ source_buffer_ofs ]));
-      int16_t mch = (int16_t)(source_buffer_uint8[1] * 256 + source_buffer_uint8[0]);
-      resample_buffer[ resample_buffer_ofs++ ] = mch / gain;
-      source_buffer_ofs += 1;
+      if (wav->half_bits == 0) {
 
-    }
+        // endian conversion only
+        int16_t* output_buffer_int16 = (int16_t*)output_buffer;
+        while (source_buffer_ofs < source_buffer_len) {
 
-  }
+          // half sampling
+          wav->resample_counter++;
+          if (!(wav->resample_counter & 0x01)) {
+            source_buffer_ofs += wav->channels;
+            continue;
+          }
 
-  return resample_buffer_ofs;
-}
+          uint8_t* source_buffer_uint8 = (uint8_t*)(&(source_buffer[ source_buffer_ofs ]));
+          int16_t mch = (int16_t)(source_buffer_uint8[1] * 256 + source_buffer_uint8[0]);
+          output_buffer_int16[ output_buffer_ofs++ ] = mch;
+        }
 
-//
-//  endian conversion only
-//
-size_t wav_decode_convert_endian(WAV_DECODE_HANDLE* wav, int16_t* resample_buffer, int16_t* source_buffer, size_t source_buffer_len) {
+      } else {
 
-  // resampling
-  size_t source_buffer_ofs = 0;
-  size_t resample_buffer_ofs = 0;
-  
-  if (wav->channels == 2) {
-  
-    while (source_buffer_ofs < source_buffer_len) {
-    
-      // little endian
-      uint8_t* source_buffer_uint8 = (uint8_t*)(&(source_buffer[ source_buffer_ofs ]));
-      int16_t lch = (int16_t)(source_buffer_uint8[1] * 256 + source_buffer_uint8[0]);
-      int16_t rch = (int16_t)(source_buffer_uint8[3] * 256 + source_buffer_uint8[2]);
-      resample_buffer[ resample_buffer_ofs++ ] = lch;
-      resample_buffer[ resample_buffer_ofs++ ] = rch;
-      source_buffer_ofs += 2;
+        // signed 16bit to signed 8bit
+        int8_t* output_buffer_int8 = (int8_t*)output_buffer;
+        while (source_buffer_ofs < source_buffer_len) {
 
-    }
+          // half sampling
+          wav->resample_counter++;
+          if (!(wav->resample_counter & 0x01)) {
+            source_buffer_ofs += wav->channels;
+            continue;
+          }
 
-  } else {
+          uint8_t* source_buffer_uint8 = (uint8_t*)(&(source_buffer[ source_buffer_ofs ]));
+          int8_t mch = (int8_t)source_buffer_uint8[1];
+          output_buffer_int8[ output_buffer_ofs++ ] = mch;
+        }
 
-    while (source_buffer_ofs < source_buffer_len) {
-  
-      // little endian
-      uint8_t* source_buffer_uint8 = (uint8_t*)(&(source_buffer[ source_buffer_ofs ]));
-      int16_t mch = (int16_t)(source_buffer_uint8[1] * 256 + source_buffer_uint8[0]);
-      resample_buffer[ resample_buffer_ofs++ ] = mch;
-      source_buffer_ofs += 1;
+      }
 
     }
 
   }
 
-  return resample_buffer_ofs;
+  return output_buffer_ofs;
 }

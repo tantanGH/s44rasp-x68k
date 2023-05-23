@@ -2,7 +2,7 @@
 #include <string.h>
 #include <doslib.h>
 #include <iocslib.h>
-#include "ras68k.h"
+#include "ras68k_pilib.h"
 
 //
 //  pilib.x keep check
@@ -71,9 +71,9 @@ int32_t ras68k_pilib_init_midi() {
 }
 
 //
-//  set ADPCM/PCM filter ($0002)
+//  set filter mode ($0002)
 //
-int32_t ras68k_pilib_set_pcm_filter(int16_t filter_enabled) {
+int32_t ras68k_pilib_set_filter_mode(int16_t filter_enabled) {
 
 	register uint32_t reg_d0 asm ("d0") = 0x0002;
 	register uint32_t reg_d1 asm ("d1") = filter_enabled;     // 0:off 1:on
@@ -112,6 +112,26 @@ int32_t ras68k_pilib_set_reverb_type(int16_t reverb_type) {
 int32_t ras68k_pilib_upload_pcm_data(void* buf, size_t buf_len) {
 
 	register uint32_t reg_d0 asm ("d0") = 0x0004;
+	register uint32_t reg_d1 asm ("d1") = buf_len;
+  register uint32_t reg_a0 asm ("a0") = (uint32_t)buf;
+
+  asm volatile (
+    "trap #5\n"         // trap #5
+    : "+r"  (reg_d0)    // output (&input) operand
+    : "r"   (reg_d1),   // input operand
+      "r"   (reg_a0)    // input operand
+    :                   // clobbered register
+  );
+
+  return reg_d0;
+}
+
+//
+//  upload pcm data 2 ($0011)
+//
+int32_t ras68k_pilib_upload_pcm_data2(void* buf, size_t buf_len) {
+
+	register uint32_t reg_d0 asm ("d0") = 0x0011;
 	register uint32_t reg_d1 asm ("d1") = buf_len;
   register uint32_t reg_a0 asm ("a0") = (uint32_t)buf;
 
@@ -221,9 +241,9 @@ int32_t ras68k_pilib_play_adpcm(uint32_t mode, void* buf, size_t buf_len) {
 }
 
 //
-//   play PCM ($000a)
+//   play PCM8 ($000a)
 //
-int32_t ras68k_pilib_play_pcm(uint16_t channel, uint32_t mode, void* buf, size_t buf_len) {
+int32_t ras68k_pilib_play_pcm8(uint16_t channel, uint32_t mode, void* buf, size_t buf_len) {
 
 	register uint32_t reg_d0 asm ("d0") = 0x000a + (channel << 16);
 	register uint32_t reg_d1 asm ("d1") = mode;
@@ -243,13 +263,13 @@ int32_t ras68k_pilib_play_pcm(uint16_t channel, uint32_t mode, void* buf, size_t
 }
 
 //
-//   play PCM at variable frequency ($000e)
+//   play PCM8pp ($000e)
 //
-int32_t ras68k_pilib_play_pcm_freq(uint16_t channel, uint32_t mode, uint32_t freq, void* buf, size_t buf_len) {
+int32_t ras68k_pilib_play_pcm8pp(uint16_t channel, uint32_t mode, uint32_t freq, void* buf, size_t buf_len) {
 
 	register uint32_t reg_d0 asm ("d0") = 0x000e + (channel << 16);
 	register uint32_t reg_d1 asm ("d1") = mode;
-	register uint32_t reg_d2 asm ("d2") = buf_len;
+  register uint32_t reg_d2 asm ("d2") = buf_len;
   register uint32_t reg_d3 asm ("d3") = freq;
 	register uint32_t reg_a1 asm ("a1") = (uint32_t)buf;
 
@@ -267,11 +287,11 @@ int32_t ras68k_pilib_play_pcm_freq(uint16_t channel, uint32_t mode, uint32_t fre
 }
 
 //
-//   set ADPCM mode ($0012)
+//   set PCM8 mode ($0012)
 //
-int32_t ras68k_pilib_set_adpcm_mode(uint16_t channel, uint32_t mode) {
+int32_t ras68k_pilib_set_pcm8_mode(uint16_t channel, uint32_t mode) {
 
-	register uint32_t reg_d0 asm ("d0") = 0x000a + (channel << 16);
+	register uint32_t reg_d0 asm ("d0") = 0x0012 + (channel << 16);
 	register uint32_t reg_d1 asm ("d1") = mode;
 
   asm volatile (
@@ -285,11 +305,11 @@ int32_t ras68k_pilib_set_adpcm_mode(uint16_t channel, uint32_t mode) {
 }
 
 //
-//   set PCM mode and freq ($0013)
+//   set PCM8PP mode ($0013)
 //
 int32_t ras68k_pilib_set_pcm_mode_freq(uint16_t channel, uint32_t mode, uint32_t freq) {
 
-	register uint32_t reg_d0 asm ("d0") = 0x000a + (channel << 16);
+	register uint32_t reg_d0 asm ("d0") = 0x0013 + (channel << 16);
 	register uint32_t reg_d1 asm ("d1") = mode;
 	register uint32_t reg_d3 asm ("d3") = freq;
 

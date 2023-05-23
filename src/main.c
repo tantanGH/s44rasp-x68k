@@ -10,14 +10,15 @@
 #include "himem.h"
 
 // drivers
-#include "ras68k.h"
+#include "ras68k_pilib.h"
 
 // decoders
+#include "adpcm_decode.h"
 #include "raw_decode.h"
 #include "wav_decode.h"
 
 // application
-#include "s44p_ras.h"
+#include "s44rasp.h"
 
 // pcm files
 static PCM_FILE pcm_files[ MAX_PCM_FILES ];
@@ -62,8 +63,9 @@ static void show_help_message() {
   printf("usage: s44p_ras [options] <input-file[.pcm|.sXX|.mXX|.wav]> [input-file..]\n");
   printf("options:\n");
   printf("       -v[n] ... volume (1-15, default:7)\n");
-  printf("       -r[n] ... reverb type (0-7, default:1)\n");
-  printf("       -q[n] ... quality (0:full, 1:half rate, 2:half rate&bits, default:2)\n");
+  printf("       -r[n] ... reverb type (0-7, default:2)\n");
+  printf("       -q[n] ... quality (0:full, 1:half-rate, default:0)\n");
+  printf("       -c[n] ... auto clipping (0:no-clip, 1:clip, default:1)\n");
   printf("\n");
   printf("       -i <indirect-file> ... indirect file\n");
   printf("       -l[n] ... loop count\n");
@@ -89,9 +91,10 @@ int32_t main(int32_t argc, uint8_t* argv[]) {
 
   // control parameters
   int16_t playback_volume = 7;
-  int16_t playback_half_rate = 1;
-  int16_t playback_half_bits = 1;
-  int16_t reverb_type = 1;
+  int16_t half_rate = 0;
+//  int16_t half_bits = 0;
+  int16_t auto_clip = 1;
+  int16_t reverb_type = REVERB_TYPE_STUDIO_SMALL;
   int16_t num_pcm_files = 0;
   int16_t loop_count = 1;
   int16_t shuffle_play = 0;
@@ -116,14 +119,19 @@ int32_t main(int32_t argc, uint8_t* argv[]) {
       } else if (argv[i][1] == 'q') {
         int16_t q = atoi(argv[i]+2);
         if (q == 0) {
-          playback_half_rate = 0;
-          playback_half_bits = 0;
+          half_rate = 0;
         } else if (q == 1) {
-          playback_half_rate = 1;
-          playback_half_bits = 0;
-        } else if (q == 2) {
-          playback_half_rate = 1;
-          playback_half_bits = 1;
+          half_rate = 1;
+        } else {
+          show_help_message();
+          goto exit;
+        }
+      } else if (argv[i][1] == 'c') {
+        int16_t c = atoi(argv[i]+2);
+        if (c == 0) {
+          auto_clip = 0;
+        } else if (c == 1) {
+          auto_clip = 1;
         } else {
           show_help_message();
           goto exit;
@@ -217,6 +225,37 @@ int32_t main(int32_t argc, uint8_t* argv[]) {
     }
   }
 
+  // check PILIB.X
+  if (!ras68k_pilib_keepchk()) {
+    printf("error: PILIB.X is not running.\n");
+    goto exit;
+  }
+
+  // ras68k-ext init OPM mode
+  if (ras68k_pilib_init_opm() != 0) {
+    printf("error: ras68k-ext OPM mode initialization error.\n");
+    goto exit;
+  }
+
+  // ras68k-ext stop PCM
+  if (ras68k_pilib_stop_pcm_all() != 0) {
+    printf("error: ras68k-ext PCM stop error.\n");
+    goto exit;
+  }
+
+  // ras68k-ext filter on
+  if (ras68k_pilib_set_filter_mode(1) != 0) {
+    printf("error: ras68k-ext set filter mode error.\n");
+    goto exit;
+  }
+
+  // ras68k-ext set reverb type
+  if (ras68k_pilib_set_reverb_type(reverb_type) != 0) {
+    printf("error: ras68k reverb type.\n");
+    goto exit;
+  }
+
+  // check number of PCM files
   if (num_pcm_files == 0) {
     show_help_message();
     goto exit;
@@ -249,31 +288,7 @@ int32_t main(int32_t argc, uint8_t* argv[]) {
     }
   }
   
-  // check PILIB.X
-  if (!ras68k_pilib_keepchk()) {
-    printf("error: PILIB.X is not running.\n");
-    goto exit;
-  }
-
-  // ras68k-ext init OPM mode
-  if (ras68k_pilib_init_opm() != 0) {
-    printf("error: ras68k-ext OPM mode initialization error.\n");
-    goto exit;
-  }
-
-  // ras68k-ext PCM filter on
-  if (ras68k_pilib_set_pcm_filter(1) != 0) {
-    printf("error: ras68k-ext PCM filter set error.\n");
-    goto exit;
-  }
-
-  // ras68k-ext set reverb type
-  if (ras68k_pilib_set_reverb_type(5) != 0) {
-    printf("error: ras68k reverb type.\n");
-    goto exit;
-  }
-
-#ifdef DEBUG
+#ifdef DEBUG2
   printf("ras68k-ext and pilib is ok.\n");
 #endif
 
@@ -294,7 +309,7 @@ loop:
   pcm_file_name   = pcm_files[ playback_index ].file_name;
   playback_volume = pcm_files[ playback_index ].volume;
 
-#ifdef DEBUG
+#ifdef DEBUG2
   printf("file=%s, volume=%d\n", pcm_file_name, playback_volume);
 #endif
 
@@ -309,18 +324,6 @@ loop:
     input_format = FORMAT_ADPCM;
     pcm_freq = 15625;
     pcm_channels = 1;
-  } else if (stricmp(".s16", pcm_file_exp) == 0) {
-    input_format = FORMAT_RAW;
-    pcm_freq = 16000;
-    pcm_channels = 2;
-  } else if (stricmp(".s22", pcm_file_exp) == 0) {
-    input_format = FORMAT_RAW;
-    pcm_freq = 22050;
-    pcm_channels = 2;
-  } else if (stricmp(".s24", pcm_file_exp) == 0) {
-    input_format = FORMAT_RAW;
-    pcm_freq = 24000;
-    pcm_channels = 2;
   } else if (stricmp(".s32", pcm_file_exp) == 0) {
     input_format = FORMAT_RAW;
     pcm_freq = 32000;
@@ -333,18 +336,6 @@ loop:
     input_format = FORMAT_RAW;
     pcm_freq = 48000;
     pcm_channels = 2;
-  } else if (stricmp(".m16", pcm_file_exp) == 0) {
-    input_format = FORMAT_RAW;
-    pcm_freq = 16000;
-    pcm_channels = 1;
-  } else if (stricmp(".m22", pcm_file_exp) == 0) {
-    input_format = FORMAT_RAW;
-    pcm_freq = 22050;
-    pcm_channels = 1;
-  } else if (stricmp(".m24", pcm_file_exp) == 0) {
-    input_format = FORMAT_RAW;
-    pcm_freq = 24000;
-    pcm_channels = 1;
   } else if (stricmp(".m32", pcm_file_exp) == 0) {
     input_format = FORMAT_RAW;
     pcm_freq = 32000;
@@ -366,12 +357,8 @@ loop:
     goto exit;
   }
 
-#ifdef DEBUG
+#ifdef DEBUG2
   printf("format=%d,freq=%d,channels=%d\n", input_format, pcm_freq, pcm_channels);
-#endif
-
-#ifdef DEBUG
-  printf("stopped pilib pcm playback.\n");
 #endif
 
   // file read buffers
@@ -380,33 +367,22 @@ loop:
 
 try:
 
-  // pcm buffers
-  pcm_buffers = (PCM_BUFFER*)himem_malloc(sizeof(PCM_BUFFER) * num_chains, 0);
-  if (pcm_buffers == NULL) {
-    printf("error: out of memory.\n");
-    goto catch;
-  }
-  memset(pcm_buffers, 0, sizeof(PCM_BUFFER) * num_chains);
-  for (int16_t i = 0; i < num_chains; i++) {
-    pcm_buffers[i].buffer = himem_malloc(PCM_BUFFER_BYTES, 0);
-    if (pcm_buffers[i].buffer == NULL) {
-      printf("error: out of memory.\n");
-      goto catch;
-    }
-    pcm_buffers[i].buffer_bytes = 0;
-  }
-
-#ifdef DEBUG
-  printf("PCM buffer allocated.\n");
-#endif
-
   // decoders
+  ADPCM_DECODE_HANDLE adpcm_decoder = { 0 };
   RAW_DECODE_HANDLE raw_decoder = { 0 };
   WAV_DECODE_HANDLE wav_decoder = { 0 };
 
+  // init adpcm decoder if needed
+  if (input_format == FORMAT_ADPCM) {
+    if (adpcm_decode_init(&adpcm_decoder, pcm_freq, auto_clip) != 0) {
+      printf("error: ADPCM decoder initialization error.\n");
+      goto catch;
+    }
+  }
+
   // init raw pcm decoder if needed
   if (input_format == FORMAT_RAW) {
-    if (raw_decode_init(&raw_decoder, pcm_freq, pcm_channels, playback_half_rate, playback_half_bits) != 0) {
+    if (raw_decode_init(&raw_decoder, pcm_freq, pcm_channels, half_rate, auto_clip) != 0) {
       printf("error: PCM decoder initialization error.\n");
       goto catch;
     }
@@ -414,15 +390,24 @@ try:
 
   // init wav decoder if needed
   if (input_format == FORMAT_WAV) {
-    if (wav_decode_init(&wav_decoder, playback_half_rate, playback_half_bits) != 0) {
+    if (wav_decode_init(&wav_decoder, half_rate, auto_clip) != 0) {
       printf("error: WAV decoder initialization error.\n");
       goto catch;
     }
   }
 
-#ifdef DEBUG
+#ifdef DEBUG2
   printf("decoder init ok.\n");
 #endif
+
+  // file size check
+  struct FILBUF filbuf;
+  if (FILES(&filbuf, pcm_file_name, 0x23) < 0) {
+    printf("error: cannot open input file (%s).\n", pcm_file_name);
+    goto catch;
+  }
+  uint32_t pcm_data_size = filbuf.filelen;
+  int16_t pcm_file_group = abs( filbuf.name[0] * 3 + filbuf.name[1] * 7 + filbuf.name[2] ) % 3;
 
   // open input file
   fp = fopen(pcm_file_name, "rb");
@@ -443,21 +428,7 @@ try:
     pcm_channels = wav_decoder.channels;
     skip_offset = ofs;
   }
-
-  // check data content size
-  fseek(fp, 0, SEEK_END);
-  uint32_t pcm_data_size = ftell(fp) - skip_offset;
-  fseek(fp, skip_offset, SEEK_SET);
-
-  // allocate file read buffer
-  size_t fread_buffer_len = pcm_freq * pcm_channels * 2;    // 2 sec
-  if (input_format != FORMAT_ADPCM) {   // ADPCM can be directly loaded to chain tables
-    fread_buffer = himem_malloc(fread_buffer_len * sizeof(int16_t), 0);
-    if (fread_buffer == NULL) {
-      printf("\rerror: file read buffer memory allocation error.\n");
-      goto catch;
-    }
-  }
+  pcm_data_size -= skip_offset;
 
   // describe PCM attributes
   if (first_play) {
@@ -488,7 +459,7 @@ try:
 
     if (input_format == FORMAT_RAW) {
       float pcm_1sec_size = pcm_freq * 2;
-      printf("PCM frequency : %d [Hz]\n", pcm_freq);
+      printf("PCM frequency : %d [Hz]\n", half_rate ? pcm_freq / 2 : pcm_freq);
       printf("PCM channels  : %s\n", pcm_channels == 1 ? "mono" : "stereo");
       printf("PCM length    : %4.2f [sec]\n", (float)pcm_data_size / pcm_channels / pcm_1sec_size);
 //      if (use_kmd) {
@@ -499,7 +470,7 @@ try:
     }
 
     if (input_format == FORMAT_WAV) {
-      printf("PCM frequency : %d [Hz]\n", pcm_freq);
+      printf("PCM frequency : %d [Hz]\n", half_rate ? pcm_freq / 2 : pcm_freq);
       printf("PCM channels  : %s\n", pcm_channels == 1 ? "mono" : "stereo");
       printf("PCM length    : %4.2f [sec]\n", (float)wav_decoder.duration / pcm_freq);
 //      if (use_kmd) {
@@ -509,10 +480,53 @@ try:
 //      }
     }
 
+    printf("Reverb type   : %s\n", 
+            reverb_type == REVERB_TYPE_NO_REVERB     ? REVERB_STR_NO_REVERB     :
+            reverb_type == REVERB_TYPE_ROOM          ? REVERB_STR_ROOM          :
+            reverb_type == REVERB_TYPE_STUDIO_SMALL  ? REVERB_STR_STUDIO_SMALL  :
+            reverb_type == REVERB_TYPE_STUDIO_MEDIUM ? REVERB_STR_STUDIO_MEDIUM :
+            reverb_type == REVERB_TYPE_STUDIO_LARGE  ? REVERB_STR_STUDIO_LARGE  :
+            reverb_type == REVERB_TYPE_HALL          ? REVERB_STR_HALL          :
+            reverb_type == REVERB_TYPE_SPACE_ECHO    ? REVERB_STR_SPACE_ECHO    :
+            reverb_type == REVERB_TYPE_HALF_ECHO     ? REVERB_STR_HALF_ECHO     : "???");
+
     printf("\n");
 
     first_play = 0;
   }
+
+  // allocate file read buffer
+  size_t fread_buffer_bytes = input_format == FORMAT_ADPCM ? 
+          pcm_freq * pcm_channels * ( 2 + 2 * ( pcm_file_group % 2 )) * 4 / 8 :   // 4bit, 2sec or 4sec
+          pcm_freq * pcm_channels * ( 3 + pcm_file_group ) * 16 / 8 / 2;          // 16bit, 1.5sec ~ 2.5sec
+  fread_buffer = himem_malloc(fread_buffer_bytes, 0);
+  if (fread_buffer == NULL) {
+    printf("\rerror: file read buffer memory allocation error.\n");
+    goto catch;
+  }
+
+  // pcm buffers
+  pcm_buffers = (PCM_BUFFER*)himem_malloc(sizeof(PCM_BUFFER) * num_chains, 0);
+  if (pcm_buffers == NULL) {
+    printf("error: out of memory.\n");
+    goto catch;
+  }
+  memset(pcm_buffers, 0, sizeof(PCM_BUFFER) * num_chains);
+  for (int16_t i = 0; i < num_chains; i++) {
+    size_t pcm_buffer_bytes = input_format == FORMAT_ADPCM ? 
+                                fread_buffer_bytes * 4 :                // 4bit to 16bit 
+                                fread_buffer_bytes / ( half_rate + 1 );
+    pcm_buffers[i].buffer = himem_malloc(pcm_buffer_bytes, 0);
+    if (pcm_buffers[i].buffer == NULL) {
+      printf("error: out of memory.\n");
+      goto catch;
+    }
+    pcm_buffers[i].buffer_bytes = 0;
+  }
+
+#ifdef DEBUG2
+  printf("PCM buffer allocated.\n");
+#endif
 
   // initial buffering
   int16_t end_flag = 0;
@@ -535,152 +549,112 @@ try:
     if (input_format == FORMAT_ADPCM) {
 
       // ADPCM(MSM6258V)
-      uint8_t* pcm_buffer = (uint8_t*)(pcm_buffers[i].buffer);
+      uint8_t* fread_buffer_uint8 = (uint8_t*)fread_buffer;
+      size_t fread_buffer_len = fread_buffer_bytes;
       size_t fread_len = 0;
       do {
-        size_t len = fread(pcm_buffer + fread_len, sizeof(uint8_t), PCM_BUFFER_BYTES - fread_len, fp);
-#ifdef DEBUG
-        printf("len=%d, PCM_BUFFER_BYTES=%d, fread_len=%d\n", len, PCM_BUFFER_BYTES, fread_len);
-#endif
+        size_t len = fread(fread_buffer_uint8 + fread_len, sizeof(uint8_t), fread_buffer_len - fread_len, fp);
         if (len == 0) break;
         fread_len += len;
-      } while (fread_len < PCM_BUFFER_BYTES);
-      if (fread_len < PCM_BUFFER_BYTES) {
+      } while (fread_len < fread_buffer_len);
+      if (fread_len < fread_buffer_len) {
         end_flag = 1;
       }
-      pcm_buffers[i].buffer_bytes = fread_len;
+      pcm_buffers[i].buffer_bytes = adpcm_decode_exec(&adpcm_decoder, pcm_buffers[i].buffer, fread_buffer_uint8, fread_len);
   
 #ifdef DEBUG
-      printf("i=%d, fread_len=%d, end_flag=%d\n", i, fread_len, end_flag);
+      printf("i=%d, fread_len=%d, buffer=%x, buffer_bytes=%d\n", i, fread_len, pcm_buffers[i].buffer, pcm_buffers[i].buffer_bytes);
 #endif
 
     } else if (input_format == FORMAT_RAW) {
 
       // raw signed 16bit PCM
-      int16_t* pcm_buffer = (int16_t*)(pcm_buffers[i].buffer);
-      size_t buffer_len = PCM_BUFFER_BYTES / sizeof(int16_t);
+      int16_t* fread_buffer_int16 = (int16_t*)fread_buffer;
+      size_t fread_buffer_len = fread_buffer_bytes / sizeof(int16_t);
       size_t fread_len = 0;
       do {
-        size_t len = fread(pcm_buffer, sizeof(int16_t), buffer_len - fread_len, fp);
+        size_t len = fread(fread_buffer_int16 + fread_len, sizeof(int16_t), fread_buffer_len - fread_len, fp);
         if (len == 0) break;
         fread_len += len;
-      } while (fread_len < buffer_len);
-      if (fread_len < buffer_len) {
+      } while (fread_len < fread_buffer_len);
+      if (fread_len < fread_buffer_len) {
         end_flag = 1;
       }
-      pcm_buffers[i].buffer_bytes = fread_len * sizeof(int16_t);
+      pcm_buffers[i].buffer_bytes = raw_decode_exec(&raw_decoder, pcm_buffers[i].buffer, fread_buffer_int16, fread_len);
+
+#ifdef DEBUG
+      printf("i=%d, fread_len=%d, buffer=%x, buffer_bytes=%d\n", i, fread_len, pcm_buffers[i].buffer, pcm_buffers[i].buffer_bytes);
+#endif
 
     } else if (input_format == FORMAT_WAV) {
 
       // WAV
-      int16_t* pcm_buffer = (int16_t*)(pcm_buffers[i].buffer);
-      size_t buffer_len = PCM_BUFFER_BYTES / sizeof(int16_t);
+      int16_t* fread_buffer_int16 = (int16_t*)fread_buffer;
+      size_t fread_buffer_len = fread_buffer_bytes / sizeof(int16_t);
       size_t fread_len = 0;
       do {
-        size_t len = fread(fread_buffer + fread_len, sizeof(int16_t), buffer_len - fread_len, fp);
+        size_t len = fread(fread_buffer_int16 + fread_len, sizeof(int16_t), fread_buffer_len - fread_len, fp);
         if (len == 0) break;
         fread_len += len;
-      } while (fread_len < buffer_len);
-      if (fread_len < buffer_len) {
+      } while (fread_len < fread_buffer_len);
+      if (fread_len < fread_buffer_len) {
         end_flag = 1;
       }
-      pcm_buffers[i].buffer_bytes = fread_len * sizeof(int16_t);
+      pcm_buffers[i].buffer_bytes = wav_decode_exec(&wav_decoder, pcm_buffers[i].buffer, fread_buffer_int16, fread_len);
+
+#ifdef DEBUG
+      printf("i=%d, fread_len=%d, buffer=%x, buffer_bytes=%d\n", i, fread_len, pcm_buffers[i].buffer, pcm_buffers[i].buffer_bytes);
+#endif
 
     }
 
-    // uplaod to ras68k-ext
-#ifdef DEBUG
+    // upload to ras68k-ext
+#ifdef DEBUG2
     printf("uploading to ras68k-ext... %x, %d\n", pcm_buffers[i].buffer, pcm_buffers[i].buffer_bytes);
 #endif
-    if (ras68k_pilib_upload_pcm_data(pcm_buffers[i].buffer, pcm_buffers[i].buffer_bytes) != 0) {
-      printf("error: ras68k PCM data upload error.\n");
-      goto exit;
+    if (pcm_buffers[i].buffer_bytes > 0) {
+      if (ras68k_pilib_upload_pcm_data(pcm_buffers[i].buffer, pcm_buffers[i].buffer_bytes) != 0) {
+        printf("error: ras68k PCM data upload error.\n");
+        goto exit;
+      } else {
+        printf("uploaded.\n");
+      }
     }
-#ifdef DEBUG
-    printf("upload completed. end_flag=%d\n", end_flag);
+#ifdef DEBUG3
+    uint32_t hash_sum = 0;
+    for (size_t j = 0; j < pcm_buffers[i].buffer_bytes; j++) {
+      hash_sum += ((uint8_t*)pcm_buffers[i].buffer)[j];
+    }
+    printf("hash=%08X, end_flag=%d\n", hash_sum, end_flag);
 #endif
   }
 
   uint16_t pilib_freq = 0x04;
   
-  if (playback_half_rate == 0) {
+  if (half_rate) {
 
-    if (playback_half_bits == 0) {
-
-      if (pcm_channels == 1) {
-        pilib_freq = pcm_freq == 16000 ? 0x09 :
-                     pcm_freq == 22050 ? 0x0a :
-                     pcm_freq == 24000 ? 0x0b :
-                     pcm_freq == 32000 ? 0x0c :
-                     pcm_freq == 44100 ? 0x0d :
-                     pcm_freq == 48000 ? 0x0e : 0x04;
-      } else {
-        pilib_freq = pcm_freq == 16000 ? 0x19 :
-                     pcm_freq == 22050 ? 0x1a :
-                     pcm_freq == 24000 ? 0x1b :
-                     pcm_freq == 32000 ? 0x1c :
-                     pcm_freq == 44100 ? 0x1d :
-                     pcm_freq == 48000 ? 0x1e : 0x04;
-      }
-
+    if (pcm_channels == 1) {
+      pilib_freq =  pcm_freq == 15625 ? 0x08 :
+                    pcm_freq == 32000 ? 0x09 :
+                    pcm_freq == 44100 ? 0x0a :
+                    pcm_freq == 48000 ? 0x0b : 0x04;
     } else {
-
-      if (pcm_channels == 1) {
-        pilib_freq = pcm_freq == 16000 ? 0x11 :
-                     pcm_freq == 22050 ? 0x12 :
-                     pcm_freq == 24000 ? 0x13 :
-                     pcm_freq == 32000 ? 0x14 :
-                     pcm_freq == 44100 ? 0x15 :
-                     pcm_freq == 48000 ? 0x16 : 0x04;
-      } else {
-        pilib_freq = pcm_freq == 16000 ? 0x21 :
-                     pcm_freq == 22050 ? 0x22 :
-                     pcm_freq == 24000 ? 0x23 :
-                     pcm_freq == 32000 ? 0x24 :
-                     pcm_freq == 44100 ? 0x25 :
-                     pcm_freq == 48000 ? 0x26 : 0x04;
-      }
-
+      pilib_freq =  pcm_freq == 32000 ? 0x19 :
+                    pcm_freq == 44100 ? 0x1a :
+                    pcm_freq == 48000 ? 0x1b : 0x04;
     }
 
   } else {
 
-    if (playback_half_bits == 0) {
-
-      if (pcm_channels == 1) {
-        pilib_freq = pcm_freq == 16000 ? 0x09 :
-                     pcm_freq == 22050 ? 0x0a :
-                     pcm_freq == 24000 ? 0x0b :
-                     pcm_freq == 32000 ? 0x09 :
-                     pcm_freq == 44100 ? 0x0a :
-                     pcm_freq == 48000 ? 0x0b : 0x04;
-      } else {
-        pilib_freq = pcm_freq == 16000 ? 0x19 :
-                     pcm_freq == 22050 ? 0x1a :
-                     pcm_freq == 24000 ? 0x1b :
-                     pcm_freq == 32000 ? 0x19 :
-                     pcm_freq == 44100 ? 0x1a :
-                     pcm_freq == 48000 ? 0x1b : 0x04;
-      }
-
+    if (pcm_channels == 1) {
+      pilib_freq =  pcm_freq == 15625 ? 0x08 : 
+                    pcm_freq == 32000 ? 0x0c :
+                    pcm_freq == 44100 ? 0x0d :
+                    pcm_freq == 48000 ? 0x0e : 0x04;
     } else {
-
-      if (pcm_channels == 1) {
-        pilib_freq = pcm_freq == 16000 ? 0x11 :
-                     pcm_freq == 22050 ? 0x12 :
-                     pcm_freq == 24000 ? 0x13 :
-                     pcm_freq == 32000 ? 0x11 :
-                     pcm_freq == 44100 ? 0x12 :
-                     pcm_freq == 48000 ? 0x13 : 0x04;
-      } else {
-        pilib_freq = pcm_freq == 16000 ? 0x21 :
-                     pcm_freq == 22050 ? 0x22 :
-                     pcm_freq == 24000 ? 0x23 :
-                     pcm_freq == 32000 ? 0x21 :
-                     pcm_freq == 44100 ? 0x22 :
-                     pcm_freq == 48000 ? 0x23 : 0x04;
-      }
-
+      pilib_freq =  pcm_freq == 32000 ? 0x1c :
+                    pcm_freq == 44100 ? 0x1d :
+                    pcm_freq == 48000 ? 0x1e : 0x04;
     }
 
   }
@@ -688,20 +662,40 @@ try:
   uint16_t pilib_pan = 0x03;
   uint32_t pilib_mode = ( playback_volume << 16 ) | ( pilib_freq << 8 ) | pilib_pan;
 
-  for (int16_t i = 0; i < num_chains; i++) {
-    if (ras68k_pilib_play_pcm(PILIB_CHANNEL, pilib_mode, pcm_buffers[i].buffer, pcm_buffers[i].buffer_bytes) != 0) {
-      printf("error: pcm play error.\n");
-      goto catch;
-    }
-    for (uint32_t t0 = ONTIME(); ONTIME() < t0 + 50;) {}
-  }
+#ifdef DEBUG
+  printf("volume=%x, freq=%x, pan=%x, mode=%x\n", playback_volume, pilib_freq, pilib_pan, pilib_mode);
+#endif
 
-  getchar();
+  B_PRINT("\rnow playing ... push [ESC]/[Q] key to quit. [SPACE] to pause. [RIGHT] to skip.\x1b[0K");
+  int16_t paused = 0;
+  uint32_t pause_time;
+
+  for (int16_t i = 0; i < num_chains; i++) {
+#ifdef DEBUG
+    printf("i=%d, buffer=%x, buffer_bytes=%d\n", i, pcm_buffers[i].buffer, pcm_buffers[i].buffer_bytes);
+#endif
+    if (pcm_buffers[i].buffer_bytes > 0) {
+      if (ras68k_pilib_play_pcm8pp(PILIB_CHANNEL, pilib_mode, half_rate ? pcm_freq * 256 / 2 : pcm_freq * 256, pcm_buffers[i].buffer, pcm_buffers[i].buffer_bytes) != 0) {
+        printf("error: pcm8pp play error.\n");
+        goto catch;
+      }
+    }
+
+    getchar();
+  }
 
 catch:
 
-  // reset pilib
-  ras68k_pilib_init_opm();
+  // ras68k-ext stop PCM
+  if (ras68k_pilib_stop_pcm_all() != 0) {
+    printf("error: ras68k-ext PCM stop error.\n");
+    goto exit;
+  }
+
+  // close adpcm decoder
+  if (input_format == FORMAT_ADPCM) {
+    adpcm_decode_close(&adpcm_decoder);
+  }
 
   // close raw decoder
   if (input_format == FORMAT_RAW) {
@@ -712,6 +706,10 @@ catch:
   if (input_format == FORMAT_WAV) {
     wav_decode_close(&wav_decoder);
   }
+
+#ifdef DEBUG
+  printf("closed decoders.\n");
+#endif
 
   // close pcm buffer
   if (pcm_buffers != NULL) {
@@ -724,6 +722,10 @@ catch:
     himem_free(pcm_buffers, 0);
     pcm_buffers = NULL;
   }
+
+#ifdef DEBUG
+  printf("reclaimed buffer memories.\n");
+#endif
 
 exit:
 

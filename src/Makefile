@@ -20,13 +20,13 @@ HLK = $(RUN68) ${XDEV68K_DIR}/x68k_bin/hlk301.x
 #HLK = $(RUN68) ${XDEV68K_DIR}/x68k_bin/LK.X
 
 # 実行ファイル名
-TARGET_FILE = S44P_RAS.X
+TARGET_FILE = S44RASP.X
 
 # Document file
-DOCUMENT_FILE = S44P_RAS.DOC
+DOCUMENT_FILE = S44RASP.DOC
 
 # Distribution package 
-PACKAGE_FILE = ../S44PR010.ZIP
+PACKAGE_FILE = ../S44RP030.ZIP
 
 # ヘッダ検索パス
 INCLUDE_FLAGS = -I${XDEV68K_DIR}/include/xc -I${XDEV68K_DIR}/include/xdev68k
@@ -37,10 +37,10 @@ CFLAGS = $(COMMON_FLAGS) -Wno-builtin-declaration-mismatch -fcall-used-d2 -fcall
     -fexec-charset=cp932 -fverbose-asm -fno-defer-pop
 
 # *.c ソースファイル
-C_SRCS = himem.c raw_decode.c wav_decode.c ras68k.c main.c
+C_SRCS = himem.c adpcm_decode.c raw_decode.c wav_decode.c ym2608_decode.c ras68k_pilib.c main.c
 
 # *.s ソースファイル
-ASM_SRCS =
+ASM_SRCS = ym2608_adpcmlib.s
 
 # *.h source files
 HEADER_SRCS = s44p_ras.h

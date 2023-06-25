@@ -42,7 +42,7 @@ def respond(port, code, body=""):
   port.flush()
 
 # service loop
-def run_service(serial_device, serial_baudrate, alsa_device, pcm_path):
+def run_service(pcm_path, alsa_device, use_oled, serial_device, serial_baudrate):
 
   # set signal handler
   signal.signal(signal.SIGINT, sigint_handler)
@@ -57,7 +57,7 @@ def run_service(serial_device, serial_baudrate, alsa_device, pcm_path):
                       rtscts = False,
                       dsrdtr = False ) as port:
 
-    print(f"Started. (serial_device={serial_device}, serial_baudrate={serial_baudrate}, alsa_device={alsa_device}, pcm_path={pcm_path})")
+    print(f"Started. (pcm_path={pcm_path}, alsa_device={alsa_device}, serial_device={serial_device}, serial_baudrate={serial_baudrate})")
 
     global g_abort_service
     g_abort_service = False
@@ -128,7 +128,10 @@ def run_service(serial_device, serial_baudrate, alsa_device, pcm_path):
             if s44rasp_proc is not None:
               while s44rasp_proc.poll() is None:
                 s44rasp_proc.kill()
-            s44rasp_proc = subprocess.Popen(["s44rasp", "-d", alsa_device, "-o", pcm_file_name], shell=False)
+            if use_oled:
+              s44rasp_proc = subprocess.Popen(["s44rasp", "-d", alsa_device, "-o", pcm_file_name], shell=False)
+            else:
+              s44rasp_proc = subprocess.Popen(["s44rasp", "-d", alsa_device, pcm_file_name], shell=False)
           else:
             respond(port, RESPONSE_NOT_FOUND, "file not found.")
 
@@ -152,12 +155,13 @@ def main():
 
     parser.add_argument("pcmpath", help="pcm data path")
     parser.add_argument("-a", "--alsa", help="alsa device name", default="hw:3,0")
+    parser.add_argument("-o", "--oled", help="oled display", action='store_true')
     parser.add_argument("-d", "--port", help="serial device name", default='/dev/serial0')
     parser.add_argument("-s", "--baudrate", help="serial baud rate", type=int, default=38400)
 
     args = parser.parse_args()
 
-    run_service(args.port, args.baudrate, args.alsa, args.pcmpath)
+    run_service(args.pcmpath, args.alsa, args.oled, args.port, args.baudrate)
 
 
 if __name__ == "__main__":

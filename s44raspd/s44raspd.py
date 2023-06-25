@@ -159,7 +159,7 @@ def main():
  
     args = parser.parse_args()
 
-    run_service(args.device, args.baudrate, args.alsa, args.pcmpath)
+    run_service(args.port, args.baudrate, args.alsa, args.pcmpath)
 
 
 if __name__ == "__main__":

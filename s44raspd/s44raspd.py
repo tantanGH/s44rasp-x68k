@@ -88,61 +88,59 @@ def run_service(serial_device, serial_baudrate, alsa_device, pcm_path):
       # read request body size (8 byte hex string, 0 padding)
       request_body_size_bytes = port.read(8)
       request_body_size = int(request_body_size_bytes.decode('ascii'), 16)
-      if verbose:
-        print(f"got request {request_body_size} bytes.")
+      print(f"got request {request_body_size} bytes.")
 
       # request body
       request_body_bytes = port.read(request_body_size)
       request_body_str = request_body_bytes.decode('ascii')
-      if verbose:
-        print(f"request: [{request_body_str}]")
+      print(f"request: [{request_body_str}]")
 
       # request handler - version
       if request_body_str.startswith("/version"):
-        if verbose:
-          print(f"response: [{API_VERSION}]")
+        print(f"response: [{API_VERSION}]")
         respond(port, RESPONSE_OK, API_VERSION)
 
       # request handler - 16bit PCM existence check with s44rasp
       elif request_body_str.startswith("/pcmhead?path="):
 
-        pcm_file_name = pcm_path + "/" + request_body_str[14:]
-        if os.path.isfile(pcm_file_name):
-          pcm_file_size = os.path.getsize(pcm_file_name)
-          respond(port, RESPONSE_OK, f"{pcm_file_size}")
+        request_path = request_body_str[14:]
+        if ".." in request_path:
+          respond(port, RESPONSE_BAD_REQUEST, "")
         else:
-          respond(port, RESPONSE_NOT_FOUND, "file not found.")
+          pcm_file_name = pcm_path + "/" + request_path
+          if os.path.isfile(pcm_file_name):
+            pcm_file_size = os.path.getsize(pcm_file_name)
+            respond(port, RESPONSE_OK, f"{pcm_file_size}")
+          else:
+            respond(port, RESPONSE_NOT_FOUND, "file not found.")
 
       # request handler - 16bit PCM play with s44rasp
       elif request_body_str.startswith("/pcmplay?path="):
 
-        pcm_file_name = pcm_path + "/" + request_body_str[14:]
-        if os.path.isfile(pcm_file_name):
-          pcm_file_size = os.path.getsize(pcm_file_name)
-          respond(port, RESPONSE_OK, f"{pcm_file_size}")
-
-          if s44rasp_proc is not None:
-            while s44rasp_proc.poll() is None:
-              s44rasp_proc.kill()
-
-          s44rasp_proc = subprocess.Popen(["s44rasp", "-d", alsa_device, "-o", pcm_file_name], shell=False)
-
+        request_path = request_body_str[14:]
+        if ".." in request_path:
+          respond(port, RESPONSE_BAD_REQUEST, "")
         else:
-          respond(port, RESPONSE_NOT_FOUND, "file not found.")
+          pcm_file_name = pcm_path + "/" + request_path
+          if os.path.isfile(pcm_file_name):
+            pcm_file_size = os.path.getsize(pcm_file_name)
+            respond(port, RESPONSE_OK, f"{pcm_file_size}")
+            if s44rasp_proc is not None:
+              while s44rasp_proc.poll() is None:
+                s44rasp_proc.kill()
+            s44rasp_proc = subprocess.Popen(["s44rasp", "-d", alsa_device, "-o", pcm_file_name], shell=False)
+          else:
+            respond(port, RESPONSE_NOT_FOUND, "file not found.")
 
       # request handler - 16bit PCM stop
       elif request_body_str.startswith("/pcmstop"):
-
         if s44rasp_proc is not None:
           while s44rasp_proc.poll() is None:
             s44rasp_proc.kill()
           s44rasp_proc = None
-
         respond(port, RESPONSE_OK, f"stopped.")
-
       else:
-        if verbose:
-          print(f"unknown request [{request_body_str}]")
+        print(f"unknown request [{request_body_str}]")
         respond(port, RESPONSE_BAD_REQUEST)
 
     print("Stopped.")
@@ -152,11 +150,11 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-d", "--port", help="serial port device name", default='/dev/serial0')
-    parser.add_argument("-s", "--baudrate", help="serial baud rate", type=int, default=38400)
+    parser.add_argument("pcmpath", help="pcm data path")
     parser.add_argument("-a", "--alsa", help="alsa device name", default="hw:3,0")
-    parser.add_argument("-p", "--pcmpath", help="pcm data path")
- 
+    parser.add_argument("-d", "--port", help="serial device name", default='/dev/serial0')
+    parser.add_argument("-s", "--baudrate", help="serial baud rate", type=int, default=38400)
+
     args = parser.parse_args()
 
     run_service(args.port, args.baudrate, args.alsa, args.pcmpath)

@@ -28,11 +28,27 @@ X680x0 の RS232C(UART) インターフェイスと Raspberry Pi を活用した
 
 ## Install (Raspberry Pi)
 
-Raspberry Pi Linux 用 S44/A44プレーヤーである [s44rasp](https://github.com/tantanGH/s44rasp) を予め導入しておきます。
+Raspberry Pi Linux 用 S44/A44プレーヤーである [s44rasp](https://github.com/tantanGH/s44rasp) をあらかじめコンパイルしてパスの通った場所に置いておきます。
 
 s44raspd を pip で導入します。
 
+    pip install git+https://github.com/tantanGH/s44rasp-x68k.git
+
 s44raspd を起動します。
+
+    s44raspd [options] <pcm-data-path>
+      pcm-data-path ... PCMデータが置かれたディクレトリのルート ここ以下にあるデータを相対パスで公開することになります
+
+    options:
+      -a <alsa-device-name>   ... alsa pcm device name (hw:1,0 など。s44rasp にそのまま渡されます)
+      -o                      ... OLED表示を行う (s44rasp にそのまま渡されます)
+      -d <serial-device-name> ... serial device name (UART直結なら /dev/serial0, USB serialなら /dev/ttyUSB0 など)
+      -s <serial-baud-rate>   ... serial baud rate (default:38400)
+
+バックグラウンドで起動する例：
+
+    nohup s44raspd -a hw:3,0 -o -d /dev/ttyUSB0 -s 38400 > s44raspd.log &
+
 
 ---
 

@@ -127,7 +127,8 @@ def run_service(pcm_path, alsa_device, use_oled, serial_device, serial_baudrate)
             respond(port, RESPONSE_OK, f"{pcm_file_size}")
             if s44rasp_proc is not None:
               while s44rasp_proc.poll() is None:
-                s44rasp_proc.terminate()
+                s44rasp_proc.send_signal(signal.SIGINT)
+                time.sleep(0.2)
             if use_oled:
               s44rasp_proc = subprocess.Popen(["s44rasp", "-d", alsa_device, "-o", pcm_file_name], shell=False)
             else:
@@ -139,7 +140,8 @@ def run_service(pcm_path, alsa_device, use_oled, serial_device, serial_baudrate)
       elif request_body_str.startswith("/pcmstop"):
         if s44rasp_proc is not None:
           while s44rasp_proc.poll() is None:
-            s44rasp_proc.terminate()
+            s44rasp_proc.send_signal(signal.SIGINT)
+            time.sleep(0.2)
           s44rasp_proc = None
         respond(port, RESPONSE_OK, f"stopped.")
       else:

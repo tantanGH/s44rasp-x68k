@@ -31,9 +31,12 @@ KMDデータの詳細および作成については[KMDED.X](https://github.com/
 
 本ソフトを動作させるには、以下のものが必要です。
 
-* X680x0 (X68000Zも可)
-* RS232C(UART) - USBクロスケーブル
+* X680x0 (X68000Z可)
+* RS232CクロスケーブルおよびRS232C-USB変換ケーブル (X68000Zの場合はUART直結クロスケーブル可)
 * Raspberry Pi 3A+/3B+/4B
+
+X68000Z で UART直結を行う場合は、Bluetoothを無効化し、PL011をPrimary UARTとする必要があります。以下のRS-MIDIの例を参考にしてください。
+[https://github.com/tantanGH/distribution/blob/main/x68000z/uart-midi-raspi.md](https://github.com/tantanGH/distribution/blob/main/x68000z/uart-midi-raspi.md)
 
 ---
 
@@ -41,7 +44,7 @@ KMDデータの詳細および作成については[KMDED.X](https://github.com/
 
 Raspberry Pi Linux 用 S44/A44プレーヤーである [s44rasp](https://github.com/tantanGH/s44rasp) をあらかじめコンパイルしてパスの通った場所に置いておきます。
 
-s44raspd を pip で導入します。
+ゲートウェイサーバー(ラッパーデーモン)となる s44raspd を pip で導入します。
 
     pip install git+https://github.com/tantanGH/s44rasp-x68k.git
 

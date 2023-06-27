@@ -81,7 +81,7 @@ S44RPxxx.ZIP をダウンロードして、S44RASP.X をパスの通ったディ
 
 引数をつけずに実行するか、`-h` オプションをつけて実行するとヘルプメッセージが表示されます。
 
-        S44RASP.X - S44/A44 PCM player over UART version " PROGRAM_VERSION " by tantan
+        S44RASP.X - S44/A44 PCM player over UART version x.x.x by tantan
         usage: s44rasp [options] <remote-pcm-path> [<remote-pcm-path> ...]
                s44rasp [options] -k <kmd-file> [<kmd-file> ...]
                s44rasp [options] -i <indirect-file>
@@ -92,11 +92,28 @@ S44RPxxx.ZIP をダウンロードして、S44RASP.X をパスの通ったディ
                -b<n> ... baud rate (default:38400)
                -h    ... show help message
 
+<remote-pcm-path> は s44raspd サーバーのデータディレクトリ以下に存在する .s44/.a44 ファイルの相対パス名を与えます。X68k側のローカルファイルではないことに注意してください。ディレクトリの区切りは必ず'/'になります。また日本語ディレクトリ名、日本語ファイル名には対応していないので注意してください。
+
+`-k` を付けると pcm 相対パスの代わりにローカルにある .KMD ファイルを指定できます。この場合はアートワーク・歌詞表示を行うことができます。remote-pcm-path については KMDに埋め込みを行う必要があります。以下のように開始時刻99:59:99,終了時刻99:59:99のイベントとしてタグRSSN:を使って指定します。
+
+    x0,y0,s02:54:93,e03:07:05,"ああ 赤イ涙 流して "
+    x0,y2,s03:00:68,e03:07:05,"この引き金 引くわ "
+    x0,y0,s99:59:99,e99:59:99,"TIT2:赤イ涙の先"
+    x0,y1,s99:59:99,e99:59:99,"TPE1:朝霧彩(CV.大野柚布子)"
+    x0,y2,s99:59:99,e99:59:99,"TALB:魔法少女サイト キャラクターソング"
+    x1,y0,s99:59:99,e99:59:99,"APIC:01.bmp"
+    x1,y1,s99:59:99,e99:59:99,"RSSN:akainamida/01.a44"
+
 サポートしているファイル形式は以下で、拡張子により判断します。
 
 - S16/S22/S24/S32/S44/S48 ... 16bit signed raw PCM stereo (big endian)
 - M16/M22/M24/M32/M44/M48 ... 16bit signed raw PCM mono (big endian)
 
+`-i` を付けるとインダイレクトファイルを指定できます。インダイレクトファイルはテキストファイルで、1行に1つのKMDファイル名およびリモートPCM pathを記述できます。
+
+    赤イ涙の先\01.kmd,akainamida/01.a44
+
+項目はカンマで区切ります。リモートPCM pathは省略可能です。その場合はKMDファイル内にRSSNタグで指定されたものが使われます。
 
 ---
 
@@ -104,11 +121,16 @@ S44RPxxx.ZIP をダウンロードして、S44RASP.X をパスの通ったディ
 
 以下の環境でのみ動作確認しています。
 
+* X68000XVI実機 (16.6MHz,無改造) + SANWA SUPPLY KRS-423XF-07K RS-232Cケーブル + CableCreation USB to RS232 アダプタ (FTDIチップセット) + Raspberry Pi 4B
+
+* X68000Z EAK 1.20 + UART自作ケーブル(秋月電子 ターミナルブロック 2.54mm 3P 使用) + Raspberry Pi 4B
+
+UARTケーブルはX68000Z EAK付属のもので大丈夫です。
 
 ---
 
 ## History
 
-* 0.4.0 (2023/06/xx) ... 初版
+* 0.5.0 (2023/06/28) ... 初版
 
 ---

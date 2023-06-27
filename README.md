@@ -75,7 +75,7 @@ S44RPxxx.ZIP をダウンロードして、S44RASP.X をパスの通ったディ
 
 ## Usage
 
-注意：本プログラムの動作には純正RSDRV.SYSまたはTMSIO.Xが必要です。
+注意：本プログラムの動作には純正RSDRV.SYSまたはTMSIO.Xが必要です。X68000Zの場合はTMSIO.Xでは正常動作しないので純正RSDRV.SYSをCONFIG.SYSで組み込んでください。
 
 注意：本プログラムはTimer-D割り込みを使うので、他のTimer-D割り込みを使う常駐プログラムとは同時に動作できません。また、CONFIG.SYS内のPROCESS=の行をコメントアウトする必要があります。
 

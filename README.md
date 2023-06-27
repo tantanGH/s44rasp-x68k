@@ -1,18 +1,20 @@
 # S44RASP.X
 
-S44/A44 player with Raspberry Pi for Human68k/X680x0
+Mercury-Unit S44/A44 data player for Human68k/X680x0 with Raspberry Pi
 
 ---
 
 ## About This
 
-X680x0 の RS232C(UART) インターフェイスと Raspberry Pi を活用した、まーきゅりーゆにっと用PCMデータのプレーヤーです。以下のような特長があります。
+まーきゅりーゆにっと用PCMデータ(S44/A44)を、まーきゅりーゆにっとの無いX680x0で16bitステレオPCMの品質のまま再生させることを目指したプレーヤーです。
 
 - まーきゅりーゆにっとが無くてもオリジナルの音質でステレオPCM再生が可能
 - KMD歌詞表示・アルバムアートワーク表示に対応
 - インダイレクトファイルによるプレイリスト演奏に対応
 
-基本的には [S44EXP.X](https://github.com/tantanGH/s44exp) のPCM再生部分をラズパイに外出しした形となっています。
+具体的には Raspberry Pi と X680x0 を RS232C(UART) でクロス接続し、X68k側からPCM再生コントロールを行うとともに、歌詞・アルバムアートワーク表示を行います。PCMデータ保持および再生は Raspberry Pi 側が担当します。
+
+<img src='images/s44rasp-x68k.png'/>
 
 ---
 

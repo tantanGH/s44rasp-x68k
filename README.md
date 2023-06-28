@@ -91,8 +91,9 @@ S44RPxxx.ZIP をダウンロードして、S44RASP.X をパスの通ったディ
 
         S44RASP.X - S44/A44 PCM player over UART version x.x.x by tantan
         usage: s44rasp [options] <remote-pcm-path> [<remote-pcm-path> ...]
+               s44rasp [options] -i <remote-pcm-indirect-file>
                s44rasp [options] -k <kmd-file> [<kmd-file> ...]
-               s44rasp [options] -i <indirect-file>
+               s44rasp [options] -j <kmd-indirect-file>
         options:
                -l<n> ... loop count (default:1)
                -s    ... shuffle mode
@@ -101,6 +102,8 @@ S44RPxxx.ZIP をダウンロードして、S44RASP.X をパスの通ったディ
                -h    ... show help message
 
 <remote-pcm-path> は s44raspd サーバーのデータディレクトリ以下に存在する .s44/.a44 ファイルの相対パス名を与えます。X68k側のローカルファイルではないことに注意してください。ディレクトリの区切りは必ず'/'になります。また日本語ディレクトリ名、日本語ファイル名には対応していないので注意してください。
+
+`-i` を付けるとインダイレクトファイルを指定できます。1行に一つの remote-pcm-path を含めることができます。
 
 `-k` を付けると pcm 相対パスの代わりにローカルにある .KMD ファイルを指定できます。この場合はアートワーク・歌詞表示を行うことができます。remote-pcm-path については KMDに埋め込みを行う必要があります。以下のように開始時刻99:59:99,終了時刻99:59:99のイベントとしてタグRSSN:を使って指定します。
 
@@ -117,7 +120,7 @@ S44RPxxx.ZIP をダウンロードして、S44RASP.X をパスの通ったディ
 - S16/S22/S24/S32/S44/S48 ... 16bit signed raw PCM stereo (big endian)
 - M16/M22/M24/M32/M44/M48 ... 16bit signed raw PCM mono (big endian)
 
-`-i` を付けるとインダイレクトファイルを指定できます。インダイレクトファイルはテキストファイルで、1行に1つのKMDファイル名およびリモートPCM pathを記述できます。
+`-j` を付けるとKMDインダイレクトファイルを指定できます。1行に1つのKMDファイル名およびリモートPCM pathをカンマ区切りで記述できます。
 
     赤イ涙の先\01.kmd,akainamida/01.a44
 

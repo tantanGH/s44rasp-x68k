@@ -117,8 +117,10 @@ remote-pcm-path は s44raspd サーバーのデータディレクトリ以下に
 
 サポートしているファイル形式は以下で、拡張子により判断します。
 
-- S16/S22/S24/S32/S44/S48 ... 16bit signed raw PCM stereo (big endian)
-- M16/M22/M24/M32/M44/M48 ... 16bit signed raw PCM mono (big endian)
+- S32/S44/S48 ... 16bit raw PCM stereo (big endian)
+- M32/M44/M48 ... 16bit raw PCM mono (big endian)
+- A32/A44/A48 ... 4/16bit YM2608 ADPCM stereo
+- N32/N44/N48 ... 4/16bit YM2608 ADPCM mono
 
 `-j` を付けるとKMDインダイレクトファイルを指定できます。1行に1つのKMDファイル名およびリモートPCM pathをカンマ区切りで記述できます。
 

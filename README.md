@@ -59,10 +59,17 @@ s44raspd を起動します。
       -d <serial-device-name> ... serial device name (UART直結なら /dev/serial0, USB serialなら /dev/ttyUSB0 など)
       -s <serial-baud-rate>   ... serial baud rate (default:38400)
 
-バックグラウンドで起動する例：
+ALSAデバイス名は `aplay -l` で確認してください。
+
+SSD1306 OLEDディスプレイが Raspberry Pi に接続されている場合は、`-o` オプションでレベルメータなどを表示することが可能です。
+
+バックグラウンドで起動する例(USB serial)：
 
     nohup s44raspd -a hw:3,0 -o -d /dev/ttyUSB0 -s 38400 > s44raspd.log &
 
+バックグラウンドで起動する例(UART)：
+
+    nohup s44raspd -a hw:3,0 -o -d /dev/serial0 -s 38400 > s44raspd.log &
 
 ---
 

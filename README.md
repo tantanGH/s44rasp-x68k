@@ -16,7 +16,7 @@ Mercury-Unit S44/A44 data player system for Human68k/X680x0 with Raspberry Pi
 具体的には Raspberry Pi と X680x0 を RS232C(UART) でクロス接続し、PCMデータ保持および再生は Raspberry Pi 側が担当します。X68kはPCM再生制御を行うとともに、歌詞・アルバムアートワーク表示を行います。
 
 
-X680x0実機+まーきゅりーゆにっとで[S44EXP.X](https://github.com/tantanGH/s44exp)を利用した時と機能面では同等になります。
+X680x0実機+まーきゅりーゆにっとで[S44EXP.X](https://github.com/tantanGH/s44exp)を利用した時と機能面では同等になります。(ただしWAVは非対応)
 
 KMDデータの詳細および作成については[KMDED.X](https://github.com/tantanGH/kmded)を参照してください。
 

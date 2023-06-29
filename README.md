@@ -16,7 +16,7 @@ Mercury-Unit S44/A44 data player system for Human68k/X680x0 with Raspberry Pi
 具体的には Raspberry Pi と X680x0 を RS232C(UART) でクロス接続し、PCMデータ保持および再生は Raspberry Pi 側が担当します。X68kはPCM再生制御を行うとともに、歌詞・アルバムアートワーク表示を行います。
 
 
-X680x0実機+まーきゅりーゆにっとで[S44EXP.X](https://github.com/tantanGH/s44exp)を利用した時と機能面では同等になります。(ただしWAV及びX68ADPCMは非対応)
+X680x0実機+まーきゅりーゆにっとで[S44EXP.X](https://github.com/tantanGH/s44exp)を利用した時と機能面では同等になります。(ただしWAV及びX68kADPCMは非対応)
 
 KMDデータの詳細および作成については[KMDED.X](https://github.com/tantanGH/kmded)を参照してください。
 
@@ -127,6 +127,14 @@ remote-pcm-path は s44raspd サーバーのデータディレクトリ以下に
     赤イ涙の先\01.kmd,akainamida/01.a44
 
 項目はカンマで区切ります。リモートPCM pathは省略可能です。その場合はKMDファイル内にRSSNタグで指定されたものが使われます。
+
+
+再生中のキーボード操作は以下の通り：
+
+* ESC/Q ... 終了
+* カーソル左 ... 1つ前の曲
+* カーソル右 ... 1つ次の曲
+* カーソル上 ... 今の曲の先頭から
 
 ---
 

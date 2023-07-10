@@ -162,7 +162,7 @@ def main():
     parser.add_argument("-o", "--oled", help="oled display", action='store_true')
     parser.add_argument("-d", "--port", help="serial device name", default='/dev/serial0')
     parser.add_argument("-s", "--baudrate", help="serial baud rate", type=int, default=38400)
-    parser.add_argument("-w", "--mcswait", help="wait msec for mcs data", type=int, default=500)
+    parser.add_argument("-w", "--mcswait", help="wait msec for mcs data", type=int, default=2000)
 
     args = parser.parse_args()
 

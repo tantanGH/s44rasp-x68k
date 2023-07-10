@@ -129,7 +129,7 @@ def run_service(pcm_path, alsa_device, use_oled, serial_device, serial_baudrate,
               while s44rasp_proc.poll() is None:
                 s44rasp_proc.send_signal(signal.SIGINT)
                 time.sleep(0.2)
-            if request_path[:-4].lower() == ".mcs":
+            if request_path[-4:].lower() == ".mcs":
               time.sleep(mcs_wait / 1000.0)
             if use_oled:
               s44rasp_proc = subprocess.Popen(["s44rasp", "-d", alsa_device, "-o", pcm_file_name], shell=False)

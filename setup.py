@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="s44raspd",
-    version="0.5.1",
+    version="0.5.2",
     author="tantanGH",
     author_email="tantanGH@github",
     license='MIT',

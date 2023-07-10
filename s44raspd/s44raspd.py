@@ -42,7 +42,7 @@ def respond(port, code, body=""):
   port.flush()
 
 # service loop
-def run_service(pcm_path, alsa_device, use_oled, serial_device, serial_baudrate):
+def run_service(pcm_path, alsa_device, use_oled, serial_device, serial_baudrate, mcs_wait):
 
   # set signal handler
   signal.signal(signal.SIGINT, sigint_handler)
@@ -129,6 +129,8 @@ def run_service(pcm_path, alsa_device, use_oled, serial_device, serial_baudrate)
               while s44rasp_proc.poll() is None:
                 s44rasp_proc.send_signal(signal.SIGINT)
                 time.sleep(0.2)
+            if request_path[:-4].lower() == ".mcs":
+              time.sleep(mcs_wait / 1000.0)
             if use_oled:
               s44rasp_proc = subprocess.Popen(["s44rasp", "-d", alsa_device, "-o", pcm_file_name], shell=False)
             else:
@@ -160,10 +162,11 @@ def main():
     parser.add_argument("-o", "--oled", help="oled display", action='store_true')
     parser.add_argument("-d", "--port", help="serial device name", default='/dev/serial0')
     parser.add_argument("-s", "--baudrate", help="serial baud rate", type=int, default=38400)
+    parser.add_argument("-w", "--mcswait", help="wait msec for mcs data", type=int, default=500)
 
     args = parser.parse_args()
 
-    run_service(args.pcmpath, args.alsa, args.oled, args.port, args.baudrate)
+    run_service(args.pcmpath, args.alsa, args.oled, args.port, args.baudrate, args.mcswait)
 
 
 if __name__ == "__main__":
